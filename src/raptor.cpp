@@ -270,6 +270,12 @@ inline void init_shared_options(seqan3::argument_parser & parser, arguments_t & 
                       "Splits the index in this many parts.",
                       seqan3::option_spec::standard,
                       power_of_two_validator{});
+    parser.add_option(arguments.shape,
+                      '\0',
+                      "shape",
+                      "Choose the shape for a gapped kmer.",
+                      seqan3::option_spec::standard,
+                      seqan3::regex_validator{});                      
 }
 
 inline void init_build_parser(seqan3::argument_parser & parser, build_arguments & arguments)

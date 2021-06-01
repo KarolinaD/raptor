@@ -1,5 +1,7 @@
 #include <seqan3/argument_parser/all.hpp>
 #include <seqan3/io/views/async_input_buffer.hpp>
+#include <seqan3/std/ranges>
+#include <seqan3/argument_parser/validators.hpp>
 
 #include <raptor_build.hpp>
 #include <raptor_search.hpp>
@@ -275,7 +277,7 @@ inline void init_shared_options(seqan3::argument_parser & parser, arguments_t & 
                       "shape",
                       "Choose the shape for a gapped kmer.",
                       seqan3::option_spec::standard,
-                      seqan3::regex_validator{});                      
+                      seqan3::regex_validator{"01+"});
 }
 
 inline void init_build_parser(seqan3::argument_parser & parser, build_arguments & arguments)
@@ -438,6 +440,12 @@ void run_build(seqan3::argument_parser & parser)
             std::cerr << "[Error] " << ext.what() << '\n';
             std::exit(-1);
         }
+    }
+
+    if (parser.is_option_set("shape"))
+    {
+        if (arguments.kmer_size != std::ranges::size(arguments.shape))
+            throw seqan3::argument_parser_error{"The shape size must be the same as k-mer size."};
     }
 
     // ==========================================

@@ -2,9 +2,6 @@ name: CI on Linux
 
 on:
   push:
-    branches:
-      # Push events to branches matching refs/heads/master
-      - 'master'
   pull_request:
 
 env:

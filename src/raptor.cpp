@@ -272,9 +272,9 @@ inline void init_shared_options(seqan3::argument_parser & parser, arguments_t & 
                       "Splits the index in this many parts.",
                       seqan3::option_spec::standard,
                       power_of_two_validator{});
-    parser.add_option(arguments.shape,
+    parser.add_option(arguments.shape_string,
                       '\0',
-                      "shape",
+                      "shape_string",
                       "Choose the shape for a gapped kmer.",
                       seqan3::option_spec::standard,
                       seqan3::regex_validator{"01+"});
@@ -442,8 +442,15 @@ void run_build(seqan3::argument_parser & parser)
         }
     }
 
-    if (parser.is_option_set("shape"))
+    if (parser.is_option_set("shape_string"))
     {
+        uint64_t shape_string_as_uint{};
+        std::from_chars(arguments.shape_string.data(), arguments.shape_string.data() + arguments.shape_string.size(), shape_string_as_uint, 2);
+
+        using namespace seqan3::literals;
+
+        arguments.shape = seqan3::shape{seqan3::bin_literal{shape_string_as_uint}};
+        
         if (arguments.kmer_size != std::ranges::size(arguments.shape))
             throw seqan3::argument_parser_error{"The shape size must be the same as k-mer size."};
     }

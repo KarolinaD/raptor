@@ -27,15 +27,14 @@ struct dna4_traits : seqan3::sequence_file_input_default_traits_dna
     using sequence_alphabet = seqan3::dna4;
 };
 
-using namespace seqan3::literals;
-
 struct build_arguments
 {
     uint32_t window_size{23u};
     uint8_t kmer_size{20u};
     uint8_t threads{1u};
     uint8_t parts{1u};
-    seqan3::shape shape{seqan3::bin_literal{0b101}};
+    std::string shape_string{};
+    seqan3::shape shape{};
 
     std::vector<std::filesystem::path> bin_path{};
     std::filesystem::path out_path{"./"};
@@ -53,7 +52,8 @@ struct search_arguments
     uint8_t kmer_size{20u};
     uint8_t threads{1u};
     uint8_t parts{1u};
-    seqan3::shape shape{seqan3::bin_literal{0b101}};
+    std::string shape_string{};
+    seqan3::shape shape{};
 
     std::filesystem::path query_file{};
     std::filesystem::path ibf_file{};

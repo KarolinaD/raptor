@@ -442,7 +442,10 @@ void run_build(seqan3::argument_parser & parser)
         }
     }
 
-    if (parser.is_option_set("shape_string"))
+    if (parser.is_option_set("shape_string") && parser.is_option_set("kmer"))
+        throw seqan3::argument_parser_error{"You cannot set both shape and k-mer arguments; please choose one."};
+
+    else if (parser.is_option_set("shape_string") && !parser.is_option_set("kmer"))
     {
         uint64_t shape_string_as_uint{};
         std::from_chars(arguments.shape_string.data(), arguments.shape_string.data() + arguments.shape_string.size(), shape_string_as_uint, 2);
@@ -450,9 +453,6 @@ void run_build(seqan3::argument_parser & parser)
         using namespace seqan3::literals;
 
         arguments.shape = seqan3::shape{seqan3::bin_literal{shape_string_as_uint}};
-        
-        if (arguments.kmer_size != std::ranges::size(arguments.shape))
-            throw seqan3::argument_parser_error{"The shape size must be the same as k-mer size."};
     }
 
     // ==========================================

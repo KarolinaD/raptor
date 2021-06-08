@@ -84,7 +84,7 @@ private:
         {
             auto worker = [&] (auto && zipped_view, auto &&)
             {
-                auto hash_view = seqan3::views::minimiser_hash(seqan3::ungapped{arguments.kmer_size},
+                auto hash_view = seqan3::views::minimiser_hash(arguments.shape,
                                                                seqan3::window_size{arguments.window_size},
                                                                seqan3::seed{adjust_seed(arguments.kmer_size)})
                                  | hash_filter_view;

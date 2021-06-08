@@ -68,14 +68,28 @@ private:
         {
             auto worker = [&] (auto && zipped_view, auto &&)
             {
-                auto hash_view = seqan3::views::minimiser_hash(seqan3::ungapped{arguments.kmer_size},
-                                                               seqan3::window_size{arguments.window_size},
-                                                               seqan3::seed{adjust_seed(arguments.kmer_size)});
+                if (arguments.kmer_size)
+                {
+                    auto hash_view = seqan3::views::minimiser_hash(seqan3::ungapped{arguments.kmer_size},
+                                                                   seqan3::window_size{arguments.window_size},
+                                                                   seqan3::seed{adjust_seed(arguments.kmer_size)});
 
-                for (auto && [file_name, bin_number] : zipped_view)
-                    for (auto && [seq] : sequence_file_t{file_name})
-                        for (auto && value : seq | hash_view)
-                            ibf.emplace(value, seqan3::bin_index{bin_number});
+                    for (auto && [file_name, bin_number] : zipped_view)
+                       for (auto && [seq] : sequence_file_t{file_name})
+                           for (auto && value : seq | hash_view)
+                               ibf.emplace(value, seqan3::bin_index{bin_number});
+                }
+                else
+                {
+                    auto hash_view = seqan3::views::minimiser_hash(arguments.shape,
+                                                                   seqan3::window_size{arguments.window_size},
+                                                                   seqan3::seed{adjust_seed(arguments.kmer_size)});
+
+                    for (auto && [file_name, bin_number] : zipped_view)
+                       for (auto && [seq] : sequence_file_t{file_name})
+                           for (auto && value : seq | hash_view)
+                               ibf.emplace(value, seqan3::bin_index{bin_number});
+                };
             };
 
             call_parallel_on_bins(worker, arguments);

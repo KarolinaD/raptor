@@ -524,6 +524,11 @@ void run_search(seqan3::argument_parser & parser)
         arguments.shape = seqan3::shape{seqan3::bin_literal{shape_string_as_uint}};
     }
 
+    else if (!parser.is_option_set("shape_string") && parser.is_option_set("kmer"))
+    {
+        arguments.shape = seqan3::ungapped{arguments.kmer_size};
+    }
+
     // ==========================================
     // Process --pattern.
     // ==========================================

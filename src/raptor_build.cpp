@@ -183,7 +183,7 @@ inline bool check_for_fasta_format(std::vector<std::string> const & valid_extens
 
 inline void compute_minimisers(build_arguments const & arguments)
 {
-    auto minimiser_view = seqan3::views::minimiser_hash(seqan3::ungapped{arguments.kmer_size},
+    auto minimiser_view = seqan3::views::minimiser_hash(arguments.shape,
                                                         seqan3::window_size{arguments.window_size},
                                                         seqan3::seed{adjust_seed(arguments.kmer_size)});
 

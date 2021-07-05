@@ -135,7 +135,7 @@ void run_program_multiple(search_arguments const & arguments)
             auto counter = ibf.template counting_agent<uint16_t>();
             size_t counter_id = start;
 
-            auto hash_view = seqan3::views::minimiser_hash(seqan3::ungapped{arguments.kmer_size},
+            auto hash_view = seqan3::views::minimiser_hash(arguments.shape,
                                                            seqan3::window_size{arguments.window_size},
                                                            seqan3::seed{adjust_seed(arguments.kmer_size)});
 
@@ -166,7 +166,7 @@ void run_program_multiple(search_arguments const & arguments)
             std::string result_string{};
             std::vector<uint64_t> minimiser;
 
-            auto hash_view = seqan3::views::minimiser_hash(seqan3::ungapped{arguments.kmer_size},
+            auto hash_view = seqan3::views::minimiser_hash(arguments.shape,
                                                            seqan3::window_size{arguments.window_size},
                                                            seqan3::seed{adjust_seed(arguments.kmer_size)});
 
@@ -268,7 +268,7 @@ void run_program_single(search_arguments const & arguments)
         std::string result_string{};
         std::vector<uint64_t> minimiser;
 
-        auto hash_view = seqan3::views::minimiser_hash(seqan3::ungapped{arguments.kmer_size},
+        auto hash_view = seqan3::views::minimiser_hash(arguments.shape,
                                                        seqan3::window_size{arguments.window_size},
                                                        seqan3::seed{adjust_seed(arguments.kmer_size)});
 

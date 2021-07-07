@@ -16,6 +16,7 @@
 #include <seqan3/alphabet/views/complement.hpp>
 #include <seqan3/core/concept/cereal.hpp>
 #include <seqan3/search/views/kmer_hash.hpp>
+#include <seqan3/std/ranges>
 
 #if SEQAN3_WITH_CEREAL
 #include <cereal/types/vector.hpp>
@@ -388,9 +389,9 @@ private:
     //!\brief The window size of the minimizer.
     uint64_t w{26};
     //!\brief The size of the k-mers.
-    uint8_t k{20};
+    seqan3::shape s{};
     //!\brief Random but fixed value to xor k-mers with. Counteracts consecutive minimizers.
-    uint64_t seed{adjust_seed(k)};
+    uint64_t seed{adjust_seed(s.size())};
 
     //!\brief Stores the k-mer hashes of the forward strand.
     std::vector<uint64_t> forward_hashes;
@@ -416,8 +417,8 @@ public:
      * \param[in] k_    The k-mer size.
      * \param[in] seed_ The seed to use. Default: 0x8F3F73B5CF1C9ADE.
      */
-    boring_minimizer(window const w_, kmer const k_, uint64_t const seed_ = 0x8F3F73B5CF1C9ADE) :
-        w{w_.v}, k{k_.v}, seed{adjust_seed(k_.v, seed_)}
+    boring_minimizer(window const w_, seqan3::shape const s, uint64_t const seed_ = 0x8F3F73B5CF1C9ADE) :
+        w{w_.v}, s{}, seed{adjust_seed(s.size(), seed_)}
     {}
 
     /*!\brief Resize the minimizer.

@@ -391,7 +391,7 @@ private:
     //!\brief The size of the k-mers.
     seqan3::shape s{};
     //!\brief Random but fixed value to xor k-mers with. Counteracts consecutive minimizers.
-    uint64_t seed{adjust_seed(s.size())};
+    uint64_t seed{adjust_seed(s.count())};
 
     //!\brief Stores the k-mer hashes of the forward strand.
     std::vector<uint64_t> forward_hashes;
@@ -418,7 +418,7 @@ public:
      * \param[in] seed_ The seed to use. Default: 0x8F3F73B5CF1C9ADE.
      */
     boring_minimizer(window const w_, seqan3::shape const s, uint64_t const seed_ = 0x8F3F73B5CF1C9ADE) :
-        w{w_.v}, s{}, seed{adjust_seed(s.size(), seed_)}
+        w{w_.v}, s{}, seed{adjust_seed(s.count())}
     {}
 
     /*!\brief Resize the minimizer.
@@ -426,11 +426,11 @@ public:
      * \param[in] k_    The new k-mer size.
      * \param[in] seed_ The new seed to use. Default: 0x8F3F73B5CF1C9ADE.
      */
-    void resize(window const w_, kmer const k_, uint64_t const seed_ = 0x8F3F73B5CF1C9ADE)
+    void resize(window const w_, seqan3::shape s_, uint64_t const seed_ = 0x8F3F73B5CF1C9ADE)
     {
         w = w_.v;
-        k = k_.v;
-        seed = adjust_seed(k_.v, seed_);
+        s = s_;
+        seed = adjust_seed(s.count());
     }
 
     void compute(text_t const & text)
@@ -443,12 +443,12 @@ public:
         minimizer_end.clear();
 
         // Return empty vector if text is shorter than k.
-        if (k > text_length)
+        if (s.size() > text_length)
             return;
 
         uint64_t possible_minimizers = text_length > w ? text_length - w + 1u : 1u;
-        assert(w >= k);
-        uint64_t kmers_per_window = w - k + 1u;
+        assert(w >= s.size());
+        uint64_t kmers_per_window = w - s.size() + 1u;
 
         // Helper lambda for xor'ing values depending on `do_xor`.
         auto apply_xor = [this] (uint64_t const val)
@@ -458,7 +458,7 @@ public:
 
         // Compute all k-mer hashes for both forward and reverse strand.
         forward_hashes = text |
-                         seqan3::views::kmer_hash(seqan3::ungapped{k}) |
+                         seqan3::views::kmer_hash(s) |
                          std::views::transform(apply_xor) |
                          seqan3::views::to<std::vector<uint64_t>>;
 
@@ -472,7 +472,7 @@ public:
 
         // Initialisation. We need to compute all hashes for the first window.
         for (uint64_t i = 0; i < kmers_per_window; ++i)
-            window_values.emplace_back(forward_hashes[i], i, i + k - 1);
+            window_values.emplace_back(forward_hashes[i], i, i + s.size() - 1);
 
         auto min = std::min_element(std::begin(window_values), std::end(window_values));
         minimizer_hash.push_back(std::get<0>(*min));
@@ -499,7 +499,7 @@ public:
 
             window_values.emplace_back(forward_hashes[kmers_per_window - 1 + i],
                                        kmers_per_window + i - 1,
-                                       kmers_per_window + i + k - 2);
+                                       kmers_per_window + i + s.size() - 2);
 
             if (std::get<0>(window_values.back()) < std::get<0>(*min))
             {
@@ -520,7 +520,7 @@ public:
 };
 
 template <seqan3::alphabet alphabet_t>
-std::vector<double> destroyed_indirectly_by_error(size_t const pattern_size, size_t const window_size, uint8_t const kmer_size)
+std::vector<double> destroyed_indirectly_by_error(size_t const pattern_size, size_t const window_size, seqan3::shape const shape)
 {
     using rank_type = decltype(seqan3::to_rank(alphabet_t{}));
     rank_type max_rank = seqan3::alphabet_size<alphabet_t> - 1;
@@ -530,7 +530,7 @@ std::vector<double> destroyed_indirectly_by_error(size_t const pattern_size, siz
     std::uniform_int_distribution<> dis2(0, pattern_size - 1);
     std::vector<uint8_t> mins(pattern_size, false);
     std::vector<uint8_t> minse(pattern_size, false);
-    std::vector<double> result(window_size - kmer_size, 0);
+    std::vector<double> result(window_size - shape.size(), 0);
     std::vector<alphabet_t> sequence;
     sequence.reserve(pattern_size);
 
@@ -543,7 +543,7 @@ std::vector<double> destroyed_indirectly_by_error(size_t const pattern_size, siz
         for (size_t i = 0; i < pattern_size; ++i)
             sequence.push_back(seqan3::assign_rank_to(dis(gen), alphabet_t{}));
 
-        boring_minimizer mini{window{window_size}, kmer{kmer_size}};
+        boring_minimizer mini{window{window_size}, shape};
         mini.compute(sequence);
         for (auto x : mini.minimizer_begin)
             mins[x] = true;
@@ -561,7 +561,7 @@ std::vector<double> destroyed_indirectly_by_error(size_t const pattern_size, siz
         size_t count = 0;
 
         for (size_t i = 0; i < pattern_size; ++i)
-            count += (mins[i] != minse[i]) && (error_pos < i || i + kmer_size < error_pos);
+            count += (mins[i] != minse[i]) && (error_pos < i || i + shape.size() < error_pos);
 
         ++result[count];
     }
@@ -574,29 +574,29 @@ std::vector<double> destroyed_indirectly_by_error(size_t const pattern_size, siz
 
 std::vector<size_t> precompute_threshold(size_t const pattern_size,
                                          size_t const window_size,
-                                         uint8_t const kmer_size,
+                                         seqan3::shape const shape,
                                          size_t const errors,
                                          double const tau)
 {
-    if (window_size == kmer_size)
-        return {pattern_size + 1 > (errors + 1) * kmer_size ? pattern_size + 1 - (errors + 1) * kmer_size : 0};
+    if (window_size == shape.size())
+        return {pattern_size + 1 > (errors + 1) * shape.size() ? pattern_size + 1 - (errors + 1) * shape.size() : 0};
 
     std::vector<size_t> thresholds;
-    size_t const kmers_per_window = window_size - kmer_size + 1;
-    size_t const kmers_per_pattern = pattern_size - kmer_size + 1;
+    size_t const kmers_per_window = window_size - shape.size() + 1;
+    size_t const kmers_per_pattern = pattern_size - shape.size() + 1;
 
     size_t const minimal_number_of_minimizers = std::ceil(kmers_per_pattern / static_cast<double>(kmers_per_window));
     size_t const maximal_number_of_minimizers = pattern_size - window_size + 1;
 
     std::vector<double> indirect_errors;
-    indirect_errors = destroyed_indirectly_by_error<seqan3::dna4>(pattern_size, window_size, kmer_size);
+    indirect_errors = destroyed_indirectly_by_error<seqan3::dna4>(pattern_size, window_size, shape);
 
     // Iterate over the possible number of minimizers
     for (size_t number_of_minimizers = minimal_number_of_minimizers; number_of_minimizers <= maximal_number_of_minimizers; ++number_of_minimizers)
     {
         std::vector<double> proba_x(kmers_per_pattern, number_of_minimizers / static_cast<double>(kmers_per_pattern));
 
-        auto [p_mean, proba] = simple_model(kmer_size, proba_x, indirect_errors);
+        auto [p_mean, proba] = simple_model(shape.size(), proba_x, indirect_errors);
         (void) p_mean;
 
         std::vector<double> proba_error(number_of_minimizers, 0);
@@ -627,7 +627,7 @@ void do_cerealisation_out(std::vector<size_t> const & vec, search_arguments cons
 {
     std::filesystem::path filename = arguments.ibf_file.parent_path() / ("binary_p" + std::to_string(arguments.pattern_size) +
                                                                          "_w" + std::to_string(arguments.window_size) +
-                                                                         "_k" + std::to_string(arguments.kmer_size) +
+                                                                         "_s" + std::to_string((arguments.shape).size()) +
                                                                          "_e" + std::to_string(arguments.errors) +
                                                                          "_tau" + std::to_string(arguments.tau));
     std::ofstream os{filename, std::ios::binary};
@@ -639,7 +639,7 @@ bool do_cerealisation_in(std::vector<size_t> & vec, search_arguments const & arg
 {
     std::filesystem::path filename = arguments.ibf_file.parent_path() / ("binary_p" + std::to_string(arguments.pattern_size) +
                                                                          "_w" + std::to_string(arguments.window_size) +
-                                                                         "_k" + std::to_string(arguments.kmer_size) +
+                                                                         "_s" + std::to_string((arguments.shape).size()) +
                                                                          "_e" + std::to_string(arguments.errors) +
                                                                          "_tau" + std::to_string(arguments.tau));
     if (!std::filesystem::exists(filename))

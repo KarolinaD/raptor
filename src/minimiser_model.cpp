@@ -417,8 +417,8 @@ public:
      * \param[in] k_    The k-mer size.
      * \param[in] seed_ The seed to use. Default: 0x8F3F73B5CF1C9ADE.
      */
-    boring_minimizer(window const w_, seqan3::shape const s, uint64_t const seed_ = 0x8F3F73B5CF1C9ADE) :
-        w{w_.v}, s{}, seed{adjust_seed(s.count())}
+    boring_minimizer(window const w_, seqan3::shape const s_) :
+        w{w_.v}, s{s_}, seed{adjust_seed(s.count())}
     {}
 
     /*!\brief Resize the minimizer.
@@ -426,7 +426,7 @@ public:
      * \param[in] k_    The new k-mer size.
      * \param[in] seed_ The new seed to use. Default: 0x8F3F73B5CF1C9ADE.
      */
-    void resize(window const w_, seqan3::shape s_, uint64_t const seed_ = 0x8F3F73B5CF1C9ADE)
+    void resize(window const w_, seqan3::shape s_)
     {
         w = w_.v;
         s = s_;

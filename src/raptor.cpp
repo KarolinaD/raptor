@@ -457,7 +457,7 @@ void run_build(seqan3::argument_parser & parser)
 
     else
     {
-        arguments.shape = seqan3::ungapped{arguments.kmer_size};
+        arguments.shape = seqan3::shape{seqan3::ungapped{arguments.kmer_size}};
     }
 
     // ==========================================
@@ -531,7 +531,7 @@ void run_search(seqan3::argument_parser & parser)
 
     else
     {
-        arguments.shape = seqan3::ungapped{arguments.kmer_size};
+        arguments.shape = seqan3::shape{seqan3::ungapped{arguments.kmer_size}};
     }
 
     // ==========================================

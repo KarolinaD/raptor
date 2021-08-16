@@ -11,8 +11,6 @@
 
 #include <shared.hpp>
 
-#include <seqan3/core/debug_stream.hpp>
-
 template <std::copy_constructible algorithm_t>
 void call_parallel_on_bins(algorithm_t && worker, build_arguments const & arguments)
 {
@@ -72,13 +70,12 @@ private:
             {
                 auto hash_view = seqan3::views::minimiser_hash(arguments.shape,
                                                                seqan3::window_size{arguments.window_size},
-                                                               seqan3::seed{adjust_seed(arguments.kmer_size)});
-                seqan3::debug_stream << hash_view << '\n';
+                                                               seqan3::seed{adjust_seed(arguments.shape.count())});
 
                 for (auto && [file_name, bin_number] : zipped_view)
-                   for (auto && [seq] : sequence_file_t{file_name})
-                       for (auto && value : seq | hash_view)
-                           ibf.emplace(value, seqan3::bin_index{bin_number});
+                    for (auto && [seq] : sequence_file_t{file_name})
+                        for (auto && value : seq | hash_view)
+                            ibf.emplace(value, seqan3::bin_index{bin_number});
             };
 
             call_parallel_on_bins(worker, arguments);
@@ -89,7 +86,7 @@ private:
             {
                 auto hash_view = seqan3::views::minimiser_hash(arguments.shape,
                                                                seqan3::window_size{arguments.window_size},
-                                                               seqan3::seed{adjust_seed(arguments.kmer_size)})
+                                                               seqan3::seed{adjust_seed(arguments.shape.count())})
                                  | hash_filter_view;
 
                 for (auto && [file_name, bin_number] : zipped_view)
@@ -188,7 +185,7 @@ inline void compute_minimisers(build_arguments const & arguments)
 {
     auto minimiser_view = seqan3::views::minimiser_hash(arguments.shape,
                                                         seqan3::window_size{arguments.window_size},
-                                                        seqan3::seed{adjust_seed(arguments.kmer_size)});
+                                                        seqan3::seed{adjust_seed(arguments.shape.count())});
 
     uint16_t const default_cutoff{50};
 

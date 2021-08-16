@@ -11,6 +11,8 @@
 
 #include <shared.hpp>
 
+#include <seqan3/core/debug_stream.hpp>
+
 template <std::copy_constructible algorithm_t>
 void call_parallel_on_bins(algorithm_t && worker, build_arguments const & arguments)
 {
@@ -71,6 +73,7 @@ private:
                 auto hash_view = seqan3::views::minimiser_hash(arguments.shape,
                                                                seqan3::window_size{arguments.window_size},
                                                                seqan3::seed{adjust_seed(arguments.kmer_size)});
+                seqan3::debug_stream << hash_view << '\n';
 
                 for (auto && [file_name, bin_number] : zipped_view)
                    for (auto && [seq] : sequence_file_t{file_name})

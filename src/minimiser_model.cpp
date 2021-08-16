@@ -389,7 +389,7 @@ private:
     //!\brief The window size of the minimizer.
     uint64_t w{26};
     //!\brief The size of the k-mers.
-    seqan3::shape s{};
+    seqan3::shape s{seqan3::ungapped{20}};
     //!\brief Random but fixed value to xor k-mers with. Counteracts consecutive minimizers.
     uint64_t seed{adjust_seed(s.count())};
 

@@ -102,12 +102,12 @@ void run_program_multiple(search_arguments const & arguments)
     double reads_io_time{0.0};
     double compute_time{0.0};
 
-    size_t const kmers_per_window = arguments.window_size - arguments.kmer_size + 1;
-    size_t const kmers_per_pattern = arguments.pattern_size - arguments.kmer_size + 1;
+    size_t const kmers_per_window = arguments.window_size - arguments.shape.size() + 1;
+    size_t const kmers_per_pattern = arguments.pattern_size - arguments.shape.size() + 1;
     size_t const min_number_of_minimisers = kmers_per_window == 1 ? kmers_per_pattern :
                                                 std::ceil(kmers_per_pattern / static_cast<double>(kmers_per_window));
-    size_t const kmer_lemma = arguments.pattern_size + 1u > (arguments.errors + 1u) * arguments.kmer_size ?
-                                arguments.pattern_size + 1u - (arguments.errors + 1u) * arguments.kmer_size :
+    size_t const kmer_lemma = arguments.pattern_size + 1u > (arguments.errors + 1u) * arguments.shape.size() ?
+                                arguments.pattern_size + 1u - (arguments.errors + 1u) * arguments.shape.size() :
                                 0;
     size_t const max_number_of_minimisers = arguments.pattern_size - arguments.window_size + 1;
     std::vector<size_t> const precomp_thresholds = compute_simple_model(arguments);
@@ -137,7 +137,7 @@ void run_program_multiple(search_arguments const & arguments)
 
             auto hash_view = seqan3::views::minimiser_hash(arguments.shape,
                                                            seqan3::window_size{arguments.window_size},
-                                                           seqan3::seed{adjust_seed(arguments.kmer_size)});
+                                                           seqan3::seed{adjust_seed(arguments.shape.count())});
 
             for (auto && [id, seq] : records | seqan3::views::slice(start, end))
             {
@@ -168,7 +168,7 @@ void run_program_multiple(search_arguments const & arguments)
 
             auto hash_view = seqan3::views::minimiser_hash(arguments.shape,
                                                            seqan3::window_size{arguments.window_size},
-                                                           seqan3::seed{adjust_seed(arguments.kmer_size)});
+                                                           seqan3::seed{adjust_seed(arguments.shape.count())});
 
             for (auto && [id, seq] : records | seqan3::views::slice(start, end))
             {
@@ -252,12 +252,12 @@ void run_program_single(search_arguments const & arguments)
 
     sync_out synced_out{arguments.out_file};
 
-    size_t const kmers_per_window = arguments.window_size - arguments.kmer_size + 1;
-    size_t const kmers_per_pattern = arguments.pattern_size - arguments.kmer_size + 1;
+    size_t const kmers_per_window = arguments.window_size - arguments.shape.size() + 1;
+    size_t const kmers_per_pattern = arguments.pattern_size - arguments.shape.size() + 1;
     size_t const min_number_of_minimisers = kmers_per_window == 1 ? kmers_per_pattern :
                                                 std::ceil(kmers_per_pattern / static_cast<double>(kmers_per_window));
-    size_t const kmer_lemma = arguments.pattern_size + 1u > (arguments.errors + 1u) * arguments.kmer_size ?
-                                arguments.pattern_size + 1u - (arguments.errors + 1u) * arguments.kmer_size :
+    size_t const kmer_lemma = arguments.pattern_size + 1u > (arguments.errors + 1u) * arguments.shape.size() ?
+                                arguments.pattern_size + 1u - (arguments.errors + 1u) * arguments.shape.size() :
                                 0;
     size_t const max_number_of_minimisers = arguments.pattern_size - arguments.window_size + 1;
     std::vector<size_t> const precomp_thresholds = compute_simple_model(arguments);
@@ -270,7 +270,7 @@ void run_program_single(search_arguments const & arguments)
 
         auto hash_view = seqan3::views::minimiser_hash(arguments.shape,
                                                        seqan3::window_size{arguments.window_size},
-                                                       seqan3::seed{adjust_seed(arguments.kmer_size)});
+                                                       seqan3::seed{adjust_seed(arguments.shape.count())});
 
         for (auto && [id, seq] : records | seqan3::views::slice(start, end))
         {

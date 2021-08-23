@@ -411,11 +411,20 @@ void run_build(seqan3::argument_parser & parser)
 
     if (parser.is_option_set("window"))
     {
-        if (arguments.kmer_size > arguments.window_size)
-            throw seqan3::argument_parser_error{"The k-mer size cannot be bigger than the window size."};
+        if (parser.is_option_set("shape_string"))
+            {
+                if (arguments.shape_string.size() > arguments.window_size)
+                    throw seqan3::argument_parser_error{"The shape size cannot be bigger than the window size."};
+            }
+        else
+            if (arguments.kmer_size > arguments.window_size)
+                throw seqan3::argument_parser_error{"The k-mer size cannot be bigger than the window size."};
     }
     else
-        arguments.window_size = arguments.kmer_size;
+        if (parser.is_option_set("shape_string"))
+            arguments.window_size = arguments.shape_string.size();
+        else
+            arguments.window_size = arguments.kmer_size;
 
     if (parser.is_option_set("compute-minimiser"))
     {
@@ -508,11 +517,20 @@ void run_search(seqan3::argument_parser & parser)
 
     if (parser.is_option_set("window"))
     {
-        if (arguments.kmer_size > arguments.window_size)
-            throw seqan3::argument_parser_error{"The k-mer size cannot be bigger than the window size."};
+        if (parser.is_option_set("shape_string"))
+            {
+                if (arguments.shape_string.size() > arguments.window_size)
+                    throw seqan3::argument_parser_error{"The shape size cannot be bigger than the window size."};
+            }
+        else
+            if (arguments.kmer_size > arguments.window_size)
+                throw seqan3::argument_parser_error{"The k-mer size cannot be bigger than the window size."};
     }
     else
-        arguments.window_size = arguments.kmer_size;
+        if (parser.is_option_set("shape_string"))
+            arguments.window_size = arguments.shape_string.size();
+        else
+            arguments.window_size = arguments.kmer_size;
 
     arguments.treshold_was_set = parser.is_option_set("threshold");
 

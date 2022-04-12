@@ -23,32 +23,49 @@ EVAL_ENERGY=False # Energy consumption was measured in the benchmark.
 input_path = os.path.join(INPUT_BASE, str(BINS))
 if not os.path.exists(input_path):
     raise OSError("{} does not exist.".format(input_path))
-output_path = os.path.join(INPUT_BASE, str(BINS))
+output_path = os.path.join(OUTPUT_BASE, str(BINS))
 os.makedirs(output_path, exist_ok=True)
 
-def process_output(path):
-    with open(path) as f:
-        tp = 0
-        fp = 0
-        fn = 0
-        for line in f:
-            if line[0] == '#':
-                continue
-            try:
-                [x, y] = line.strip().split('\t')
-            except ValueError:
-                fn += 1
-                continue
-            [read_id, bins] = [int(x), [int(e) for e in y.split(',') if e != '']]
-            true_id = (read_id % READ_COUNT) // (READ_COUNT // BINS)
-            if true_id in bins:
-                tp += 1
-                if len(bins) != 1:
-                    fp += len(bins) - 1
-            else:
-                fn += 1
-                fp += len(bins)
-        return [tp,fp,fn]
+def process_output(path, path_to_fp, path_to_fn):
+    with open(path_to_fp, "w") as fp_f:
+        with open(path_to_fn, "w") as fn_f:
+            with open(path) as f:
+                tp = 0
+                tn = 0
+                fp = 0
+                fn = 0
+                for line in f:
+                    if line[0] == '#':
+                        continue
+                    try:
+                        [x, y] = line.strip().split('\t')
+                    except ValueError:
+                        try:
+                            x = line.strip()
+                            [read_id, bins] = [x, ['']]
+                            fn += 1
+                            fn_f.write("False negative: read:{} bins:{}\n".format(read_id, bins))
+                        except ValueError:
+                            print("Line is empty.")
+                        continue
+                    [read_id, bins] = [int(x), [int(e) for e in y.split(',') if e != '']]
+                    true_id = (read_id % READ_COUNT) // (READ_COUNT // BINS)
+                    if true_id in bins:
+                        tp += 1
+                        if len(bins) != 1:
+                            fp += len(bins) - 1
+                            tn += BINS - len(bins)
+                            fp_f.write("False positive: read:{} bins:{}\n".format(read_id, bins))
+                        else:
+                            tn += BINS - 1
+                    else:
+                        fn += 1
+                        fn_f.write("False negative: read:{} bins:{}\n".format(read_id, bins))
+                        fp += len(bins)
+                        tn += BINS - len(bins) - 1
+                        if len(bins) != 0:
+                            fp_f.write("False positive: read:{} bins:{}\n".format(read_id, bins))
+                return [tp,tn,fp,fn]
 
 def process_time_log(path):
     time = []
@@ -93,9 +110,11 @@ def process_energy(path):
 def get_param_list(path = output_path):
     result = []
     for entry in os.listdir(path):
-        match = re.match('(\d+)_(\d+)_(\d+\w).out$', entry)
+        # match = re.match('(\d+)_(\d+)_(\d+\w).out$', entry)
+        match = re.match('(\d+)_(\d+)_(\d+)_(\d+\w).out$', entry)
         if match is not None:
-            result.append( (match.group(1), match.group(2), match.group(3)) )
+            # result.append( (match.group(1), match.group(2), match.group(3)) )
+            result.append( (match.group(1), match.group(2), match.group(3), match.group(4)) )
     result.sort(key=lambda entry: int(entry[2][:-1]))
     return result
 
@@ -103,21 +122,31 @@ def generate_table_unpartitioned():
     data = []
     params = get_param_list()
     format_string = 'Processing file {{:>{}}} of {}...'.format(len(str(len(params))), len(params))
-    for i, (window_size, kmer_size, ibf_size) in enumerate(params):
+    # for i, (window_size, kmer_size, ibf_size) in enumerate(params):
+    #     print(format_string.format(i + 1), end='', flush=True)
+    #     path_to_build_log = os.path.join(output_path, '{}_{}_{}_build.log'.format(window_size, kmer_size, ibf_size))
+    #     path_to_build_perf = os.path.join(input_path, '{}_{}_{}_build.perf'.format(window_size, kmer_size, ibf_size))
+    #     path_to_query_log = os.path.join(output_path, '{}_{}_{}_query.log'.format(window_size, kmer_size, ibf_size))
+    #     path_to_query_perf = os.path.join(input_path, '{}_{}_{}_query.perf'.format(window_size, kmer_size, ibf_size))
+    #     path_to_output = os.path.join(output_path, '{}_{}_{}.out'.format(window_size, kmer_size, ibf_size))
+    #     path_to_internal_time = os.path.join(output_path, '{}_{}_{}.out.time'.format(window_size, kmer_size, ibf_size))
+    for i, (window_size, span, shape, ibf_size) in enumerate(params):
         print(format_string.format(i + 1), end='', flush=True)
-        path_to_build_log = os.path.join(output_path, '{}_{}_{}_build.log'.format(window_size, kmer_size, ibf_size))
-        path_to_build_perf = os.path.join(input_path, '{}_{}_{}_build.perf'.format(window_size, kmer_size, ibf_size))
-        path_to_query_log = os.path.join(output_path, '{}_{}_{}_query.log'.format(window_size, kmer_size, ibf_size))
-        path_to_query_perf = os.path.join(input_path, '{}_{}_{}_query.perf'.format(window_size, kmer_size, ibf_size))
-        path_to_output = os.path.join(output_path, '{}_{}_{}.out'.format(window_size, kmer_size, ibf_size))
-        path_to_internal_time = os.path.join(output_path, '{}_{}_{}.out.time'.format(window_size, kmer_size, ibf_size))
+        path_to_build_log = os.path.join(output_path, '{}_{}_{}_{}_build.log'.format(window_size, span, shape, ibf_size))
+        path_to_build_perf = os.path.join(input_path, '{}_{}_{}_{}_build.perf'.format(window_size, span, shape, ibf_size))
+        path_to_query_log = os.path.join(output_path, '{}_{}_{}_{}_query.log'.format(window_size, span, shape, ibf_size))
+        path_to_query_perf = os.path.join(input_path, '{}_{}_{}_{}_query.perf'.format(window_size, span, shape, ibf_size))
+        path_to_output = os.path.join(output_path, '{}_{}_{}_{}.out'.format(window_size, span, shape, ibf_size))
+        path_to_internal_time = os.path.join(output_path, '{}_{}_{}_{}.out.time'.format(window_size, span, shape, ibf_size))
+        path_to_fp = os.path.join(output_path, 'fp_{}_{}_{}_{}.out.time'.format(window_size, span, shape, ibf_size))
+        path_to_fn = os.path.join(output_path, 'fn_{}_{}_{}_{}.out.time'.format(window_size, span, shape, ibf_size))
 
         [build_time, build_ram] = process_time_log(path_to_build_log)
         [build_energy_pkg, build_energy_ram] = process_energy(path_to_build_perf)
         [query_time, query_ram] = process_time_log(path_to_query_log)
         [query_energy_pkg, query_energy_ram] = process_energy(path_to_query_perf)
         [query_ibf_time, query_reads_time, query_compute_time] = process_internal_time(path_to_internal_time)
-        [tp, fp, fn] = process_output(path_to_output)
+        [tp, tn, fp, fn] = process_output(path_to_output, path_to_fp, path_to_fn)
 
         data.append([build_time,
                      build_ram,
@@ -130,6 +159,8 @@ def generate_table_unpartitioned():
                      query_ram,
                      query_energy_pkg,
                      query_energy_ram,
+                     tp,
+                     tn,
                      fp,
                      fn])
         print('Done', flush=True)
@@ -144,10 +175,13 @@ def generate_table_unpartitioned():
                                        ('Search', 'RAM [MiB]'),
                                        ('Search', 'energy-pkg [J]'),
                                        ('Search', 'energy-ram [J]'),
+                                       ('Search', 'TP'),
+                                       ('Search', 'TN'),
                                        ('Search', 'FP'),
                                        ('Search', 'FN')])
     df.index = [str(x).replace(',', ';').replace("'", '') for x in params]
-    df.columns = pd.MultiIndex.from_tuples(df.columns, names=['','(w; k; size)'])
+    # df.columns = pd.MultiIndex.from_tuples(df.columns, names=['','(w; k; size)'])
+    df.columns = pd.MultiIndex.from_tuples(df.columns, names=['','(w; span; shape; size)'])
     if not EVAL_ENERGY:
         df = df.drop([('Construct', 'energy-pkg [J]'), ('Construct', 'energy-ram [J]'),
                       ('Search', 'energy-pkg [J]'), ('Search', 'energy-ram [J]')], axis=1)

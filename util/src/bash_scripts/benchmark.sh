@@ -12,6 +12,7 @@ set -e
 READ_LENGTH=100
 W=23
 K=19
+S=1111111111111111111
 ERRORS=2
 HASH=2
 SIZES="1g 2g 4g"
@@ -62,23 +63,30 @@ launch_query() {
 }
 
 for size in $SIZES; do
-    ibf_filename=$working_directory/$W\_$K\_$size.ibf # Does not contain HASH
-    build_log=$working_directory/$W\_$K\_$size\_build.log
-    build_perf=$working_directory/$W\_$K\_$size\_build.perf
-    echo "Building IBF with ($W, $K)-minimisers with $HASH hashes and of size $size"
+    # ibf_filename=$working_directory/$W\_$K\_$size.ibf # Does not contain HASH
+    # build_log=$working_directory/$W\_$K\_$size\_build.log
+    # build_perf=$working_directory/$W\_$K\_$size\_build.perf
+    # echo "Building IBF with ($W, $K)-minimisers with $HASH hashes and of size $size"
+    ibf_filename=$working_directory/$W\_${#S}\_$S\_$size.ibf # Does not contain HASH
+    build_log=$working_directory/$W\_${#S}\_$S\_$size\_build.log
+    build_perf=$working_directory/$W\_${#S}\_$S\_$size\_build.perf
+    echo "Building IBF with ($W, ${#S}, $S)-minimisers with $HASH hashes and of size $size"
     launch_build    /usr/bin/time -o $build_log -v \
                         $BINARY_DIR/raptor build \
                             --output $ibf_filename \
-                            --kmer $K \
+                            --shape $S \
                             --window $W \
                             --size $size \
                             --threads $THREADS \
                             --hash $HASH \
                             $working_directory/bins.list
 
-    query_log=$working_directory/$W\_$K\_$size\_query.log # Does not contain HASH
-    query_perf=$working_directory/$W\_$K\_$size\_query.perf
-    query_out=$working_directory/$W\_$K\_$size.out
+    # query_log=$working_directory/$W\_$K\_$size\_query.log # Does not contain HASH
+    # query_perf=$working_directory/$W\_$K\_$size\_query.perf
+    # query_out=$working_directory/$W\_$K\_$size.out
+    query_log=$working_directory/$W\_${#S}\_$S\_$size\_query.log # Does not contain HASH
+    query_perf=$working_directory/$W\_${#S}\_$S\_$size\_query.perf
+    query_out=$working_directory/$W\_${#S}\_$S\_$size.out
     echo "Searching IBF for reads of length $READ_LENGTH containing $ERRORS errors"
     launch_query    /usr/bin/time -o $query_log -v \
                             $BINARY_DIR/raptor search \

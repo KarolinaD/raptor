@@ -44,6 +44,7 @@ def process_output(path, path_to_fp, path_to_fn):
                             x = line.strip()
                             [read_id, bins] = [x, ['']]
                             fn += 1
+                            tn += BINS - 1
                             fn_f.write("False negative: read:{} bins:{}\n".format(read_id, bins))
                         except ValueError:
                             print("Line is empty.")
@@ -61,10 +62,13 @@ def process_output(path, path_to_fp, path_to_fn):
                     else:
                         fn += 1
                         fn_f.write("False negative: read:{} bins:{}\n".format(read_id, bins))
-                        fp += len(bins)
-                        tn += BINS - len(bins) - 1
-                        if len(bins) != 0:
-                            fp_f.write("False positive: read:{} bins:{}\n".format(read_id, bins))
+                        if len(bins) != 1:
+                            fp += len(bins)
+                            tn += BINS - len(bins) - 1
+                        else:
+                            fp += 1
+                            tn += BINS - 2
+                        fp_f.write("False positive: read:{} bins:{}\n".format(read_id, bins))
                 return [tp,tn,fp,fn]
 
 def process_time_log(path):
@@ -138,8 +142,8 @@ def generate_table_unpartitioned():
         path_to_query_perf = os.path.join(input_path, '{}_{}_{}_{}_query.perf'.format(window_size, span, shape, ibf_size))
         path_to_output = os.path.join(output_path, '{}_{}_{}_{}.out'.format(window_size, span, shape, ibf_size))
         path_to_internal_time = os.path.join(output_path, '{}_{}_{}_{}.out.time'.format(window_size, span, shape, ibf_size))
-        path_to_fp = os.path.join(output_path, 'fp_{}_{}_{}_{}.out.time'.format(window_size, span, shape, ibf_size))
-        path_to_fn = os.path.join(output_path, 'fn_{}_{}_{}_{}.out.time'.format(window_size, span, shape, ibf_size))
+        path_to_fp = os.path.join(output_path, 'fp_{}_{}_{}_{}.txt'.format(window_size, span, shape, ibf_size))
+        path_to_fn = os.path.join(output_path, 'fn_{}_{}_{}_{}.txt'.format(window_size, span, shape, ibf_size))
 
         [build_time, build_ram] = process_time_log(path_to_build_log)
         [build_energy_pkg, build_energy_ram] = process_energy(path_to_build_perf)
@@ -181,7 +185,7 @@ def generate_table_unpartitioned():
                                        ('Search', 'FN')])
     df.index = [str(x).replace(',', ';').replace("'", '') for x in params]
     # df.columns = pd.MultiIndex.from_tuples(df.columns, names=['','(w; k; size)'])
-    df.columns = pd.MultiIndex.from_tuples(df.columns, names=['','(w; span; shape; size)'])
+    df.columns = pd.MultiIndex.from_tuples(df.columns, names=['','(window; shape span; shape; ibf size)'])
     if not EVAL_ENERGY:
         df = df.drop([('Construct', 'energy-pkg [J]'), ('Construct', 'energy-ram [J]'),
                       ('Search', 'energy-pkg [J]'), ('Search', 'energy-ram [J]')], axis=1)

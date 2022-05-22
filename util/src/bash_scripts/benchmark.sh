@@ -19,6 +19,7 @@ SIZES="1g 2g 4g"
 THREADS=4
 BIN_NUMBER=1024
 BINARY_DIR="<path to built binaries>" # containing the raptor binary
+UTIL_BINARY_DIR="<path to built util binaries>" # containing the util binary
 INPUT_DIR="<bin path>" # output directory of simulation. the directory that contains the BIN_NUMBER directory
 BENCHMARK_DIR="<path>" # directory where results should be stored. E.g., /dev/shm/username; BIN_NUMBER directory will be created.
 COPY_INPUT=false # If true, input data will be copied from INPUT_DIR to BENCHMARK_DIR.
@@ -98,6 +99,18 @@ for size in $SIZES; do
                                 --pattern $READ_LENGTH \
                                 --tau 0.9999 \
                                 --time
+
+    threshold_log=$working_directory/$W\_${#S}\_$S\_$size\_threshold.log
+    threshold_out=$working_directory/$W\_${#S}\_$S\_$size\_threshold.out
+    /usr/bin/time -o $threshold_log -v \
+        $UTIL_BINARY_DIR/threshold_info \
+            --query $read_file \
+            --output $threshold_out \
+            --threads $THREADS \
+            --error $ERRORS \
+            --pattern $READ_LENGTH \
+            --shape $S \
+            --window $W
 
     rm $ibf_filename
 done

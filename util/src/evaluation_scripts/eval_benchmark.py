@@ -14,17 +14,31 @@ import os
 import re
 import time
 
-BINS=1024
+BINS=64
 READ_COUNT=1048576
+ERRORS=4
+IS_THRESHOLD=False
+THRESHOLD=0.16
 INPUT_BASE = '/home/infri/develop/raptor/build/util/test/results' # E.g., /dev/shm/username; should contain BINS subdirectory.
 OUTPUT_BASE = '/home/infri/develop/raptor/build/util/test/results' # Will create BINS subdirectory.
 EVAL_ENERGY=False # Energy consumption was measured in the benchmark.
 
-input_path = os.path.join(INPUT_BASE, str(BINS))
-if not os.path.exists(input_path):
-    raise OSError("{} does not exist.".format(input_path))
-output_path = os.path.join(OUTPUT_BASE, str(BINS))
-os.makedirs(output_path, exist_ok=True)
+if IS_THRESHOLD:
+    input_path = os.path.join(INPUT_BASE, str(BINS), "threshold_"+str(THRESHOLD))
+    if not os.path.exists(input_path):
+        raise OSError("{} does not exist.".format(input_path))
+    output_path = os.path.join(OUTPUT_BASE, str(BINS), "threshold_"+str(THRESHOLD))
+    os.makedirs(output_path, exist_ok=True)
+else:
+    input_path = os.path.join(INPUT_BASE, str(BINS))
+    if not os.path.exists(input_path):
+        raise OSError("{} does not exist.".format(input_path))
+    output_path = os.path.join(OUTPUT_BASE, str(BINS))
+    os.makedirs(output_path, exist_ok=True)
+
+build_path = os.path.join(INPUT_BASE, str(BINS))
+if not os.path.exists(build_path):
+    raise OSError("{} does not exist.".format(build_path))
 
 def process_output(path, path_to_fp, path_to_fn):
     with open(path_to_fp, "w") as fp_f:
@@ -114,10 +128,8 @@ def process_energy(path):
 def get_param_list(path = output_path):
     result = []
     for entry in os.listdir(path):
-        # match = re.match('(\d+)_(\d+)_(\d+\w).out$', entry)
         match = re.match('(\d+)_(\d+)_(\d+)_(\d+\w).out$', entry)
         if match is not None:
-            # result.append( (match.group(1), match.group(2), match.group(3)) )
             result.append( (match.group(1), match.group(2), match.group(3), match.group(4)) )
     result.sort(key=lambda entry: int(entry[2][:-1]))
     return result
@@ -126,18 +138,14 @@ def generate_table_unpartitioned():
     data = []
     params = get_param_list()
     format_string = 'Processing file {{:>{}}} of {}...'.format(len(str(len(params))), len(params))
-    # for i, (window_size, kmer_size, ibf_size) in enumerate(params):
-    #     print(format_string.format(i + 1), end='', flush=True)
-    #     path_to_build_log = os.path.join(output_path, '{}_{}_{}_build.log'.format(window_size, kmer_size, ibf_size))
-    #     path_to_build_perf = os.path.join(input_path, '{}_{}_{}_build.perf'.format(window_size, kmer_size, ibf_size))
-    #     path_to_query_log = os.path.join(output_path, '{}_{}_{}_query.log'.format(window_size, kmer_size, ibf_size))
-    #     path_to_query_perf = os.path.join(input_path, '{}_{}_{}_query.perf'.format(window_size, kmer_size, ibf_size))
-    #     path_to_output = os.path.join(output_path, '{}_{}_{}.out'.format(window_size, kmer_size, ibf_size))
-    #     path_to_internal_time = os.path.join(output_path, '{}_{}_{}.out.time'.format(window_size, kmer_size, ibf_size))
+    if IS_THRESHOLD:
+        print("Performing evaluation for shape "+str(params[0][2])+" of span "+str(params[0][1])+" in window size "+str(params[0][0])+" with "+str(ERRORS)+" errors, for threshold "+str(THRESHOLD))
+    else:
+        print("Performing evaluation for shape "+str(params[0][2])+" of span "+str(params[0][1])+" in window size "+str(params[0][0])+" with "+str(ERRORS)+" errors")
     for i, (window_size, span, shape, ibf_size) in enumerate(params):
         print(format_string.format(i + 1), end='', flush=True)
-        path_to_build_log = os.path.join(output_path, '{}_{}_{}_{}_build.log'.format(window_size, span, shape, ibf_size))
-        path_to_build_perf = os.path.join(input_path, '{}_{}_{}_{}_build.perf'.format(window_size, span, shape, ibf_size))
+        path_to_build_log = os.path.join(build_path, '{}_{}_{}_{}_build.log'.format(window_size, span, shape, ibf_size))
+        path_to_build_perf = os.path.join(build_path, '{}_{}_{}_{}_build.perf'.format(window_size, span, shape, ibf_size))
         path_to_query_log = os.path.join(output_path, '{}_{}_{}_{}_query.log'.format(window_size, span, shape, ibf_size))
         path_to_query_perf = os.path.join(input_path, '{}_{}_{}_{}_query.perf'.format(window_size, span, shape, ibf_size))
         path_to_output = os.path.join(output_path, '{}_{}_{}_{}.out'.format(window_size, span, shape, ibf_size))
@@ -168,6 +176,8 @@ def generate_table_unpartitioned():
                      fp,
                      fn])
         print('Done', flush=True)
+        print('FP: '+str(fp))
+        print('FN: '+str(fn))
     df = pd.DataFrame(data, columns = [('Construct', 'Time [MM:SS]'),
                                        ('Construct', 'RAM [MiB]'),
                                        ('Construct', 'energy-pkg [J]'),

@@ -10,23 +10,31 @@
 set -e
 
 READ_LENGTH=100
-W=23
+W=35
 K=19
-S=1111111111111111111
-ERRORS=2
+S=11110100110100001101100001100110111
+ERRORS=4
 HASH=2
-SIZES="1g 2g 4g"
-THREADS=4
-BIN_NUMBER=1024
+SIZES="4g"
+THREADS=32
+BIN_NUMBER=64
+IS_THRESHOLD=false
+THRESHOLD=0.16
 BINARY_DIR="<path to built binaries>" # containing the raptor binary
 UTIL_BINARY_DIR="<path to built util binaries>" # containing the util binary
 INPUT_DIR="<bin path>" # output directory of simulation. the directory that contains the BIN_NUMBER directory
 BENCHMARK_DIR="<path>" # directory where results should be stored. E.g., /dev/shm/username; BIN_NUMBER directory will be created.
 COPY_INPUT=false # If true, input data will be copied from INPUT_DIR to BENCHMARK_DIR.
-EVAL_ENERGY=true # If true, use perf to measure power/energy-pkg/ and power/energy-ram/.
+EVAL_ENERGY=false # If true, use perf to measure power/energy-pkg/ and power/energy-ram/.
 
-working_directory=$BENCHMARK_DIR/$BIN_NUMBER
+if [ "$IS_THRESHOLD" = true ] ; then
+    working_directory=$BENCHMARK_DIR/$BIN_NUMBER/threshold_$THRESHOLD
+else
+    working_directory=$BENCHMARK_DIR/$BIN_NUMBER
+fi
 mkdir -p $working_directory
+
+build_directory="/srv/hdd/karolid94/benchmark_results/"$ERRORS"_errors/shape_option/mandala/span"${#S}/$BIN_NUMBER
 
 if [ "$COPY_INPUT" = true ] ; then
     echo -n "Copying input..."
@@ -64,44 +72,58 @@ launch_query() {
 }
 
 for size in $SIZES; do
-    # ibf_filename=$working_directory/$W\_$K\_$size.ibf # Does not contain HASH
-    # build_log=$working_directory/$W\_$K\_$size\_build.log
-    # build_perf=$working_directory/$W\_$K\_$size\_build.perf
-    # echo "Building IBF with ($W, $K)-minimisers with $HASH hashes and of size $size"
-    ibf_filename=$working_directory/$W\_${#S}\_$S\_$size.ibf # Does not contain HASH
-    build_log=$working_directory/$W\_${#S}\_$S\_$size\_build.log
-    build_perf=$working_directory/$W\_${#S}\_$S\_$size\_build.perf
-    echo "Building IBF with ($W, ${#S}, $S)-minimisers with $HASH hashes and of size $size"
-    launch_build    /usr/bin/time -o $build_log -v \
-                        $BINARY_DIR/raptor build \
-                            --output $ibf_filename \
-                            --shape $S \
-                            --window $W \
-                            --size $size \
-                            --threads $THREADS \
-                            --hash $HASH \
-                            $working_directory/bins.list
+    if [ "$IS_THRESHOLD" = true ] ; then
+        ibf_filename=$build_directory/$W\_${#S}\_$S\_$size.ibf # Does not contain HASH
+        query_log=$working_directory/$W\_${#S}\_$S\_$size\_query.log # Does not contain HASH
+        query_perf=$working_directory/$W\_${#S}\_$S\_$size\_query.perf
+        query_out=$working_directory/$W\_${#S}\_$S\_$size.out
+        echo "Searching IBF for reads of length $READ_LENGTH containing $ERRORS errors using percentage threshold $THRESHOLD"
+        launch_query    /usr/bin/time -o $query_log -v \
+                                $BINARY_DIR/raptor search \
+                                    --query $read_file \
+                                    --index $ibf_filename \
+                                    --output $query_out \
+                                    --threads $THREADS \
+                                    --error $ERRORS \
+                                    --pattern $READ_LENGTH \
+                                    --tau 0.9999 \
+                                    --time \
+                                    --threshold $THRESHOLD
 
-    # query_log=$working_directory/$W\_$K\_$size\_query.log # Does not contain HASH
-    # query_perf=$working_directory/$W\_$K\_$size\_query.perf
-    # query_out=$working_directory/$W\_$K\_$size.out
-    query_log=$working_directory/$W\_${#S}\_$S\_$size\_query.log # Does not contain HASH
-    query_perf=$working_directory/$W\_${#S}\_$S\_$size\_query.perf
-    query_out=$working_directory/$W\_${#S}\_$S\_$size.out
-    echo "Searching IBF for reads of length $READ_LENGTH containing $ERRORS errors"
-    launch_query    /usr/bin/time -o $query_log -v \
-                            $BINARY_DIR/raptor search \
-                                --query $read_file \
-                                --index $ibf_filename \
-                                --output $query_out \
+    elif [ "$IS_THRESHOLD" = false ] ; then
+        ibf_filename=$build_directory/$W\_${#S}\_$S\_$size.ibf # Does not contain HASH
+        build_log=$working_directory/$W\_${#S}\_$S\_$size\_build.log
+        build_perf=$working_directory/$W\_${#S}\_$S\_$size\_build.perf
+        echo "Building IBF with ($W, ${#S}, $S)-minimisers with $HASH hashes and of size $size"
+        launch_build    /usr/bin/time -o $build_log -v \
+                            $BINARY_DIR/raptor build \
+                                --output $ibf_filename \
+                                --shape $S \
+                                --window $W \
+                                --size $size \
                                 --threads $THREADS \
-                                --error $ERRORS \
-                                --pattern $READ_LENGTH \
-                                --tau 0.9999 \
-                                --time
+                                --hash $HASH \
+                                $working_directory/bins.list 
+
+        query_log=$working_directory/$W\_${#S}\_$S\_$size\_query.log # Does not contain HASH
+        query_perf=$working_directory/$W\_${#S}\_$S\_$size\_query.perf
+        query_out=$working_directory/$W\_${#S}\_$S\_$size.out
+        echo "Searching IBF for reads of length $READ_LENGTH containing $ERRORS errors"
+        launch_query    /usr/bin/time -o $query_log -v \
+                                $BINARY_DIR/raptor search \
+                                    --query $read_file \
+                                    --index $ibf_filename \
+                                    --output $query_out \
+                                    --threads $THREADS \
+                                    --error $ERRORS \
+                                    --pattern $READ_LENGTH \
+                                    --tau 0.9999 \
+                                    --time
+    fi
 
     threshold_log=$working_directory/$W\_${#S}\_$S\_$size\_threshold.log
     threshold_out=$working_directory/$W\_${#S}\_$S\_$size\_threshold.out
+    echo "Collecting information about threshold calculation"
     /usr/bin/time -o $threshold_log -v \
         $UTIL_BINARY_DIR/threshold_info \
             --query $read_file \
@@ -112,7 +134,7 @@ for size in $SIZES; do
             --shape $S \
             --window $W
 
-    rm $ibf_filename
+    #rm $ibf_filename
 done
 
 # Uncomment for basic cleanup, does not delete results

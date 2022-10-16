@@ -9,12 +9,13 @@
 
 set -Eeuo pipefail
 
-BINARY_DIR="<path to built binaries>" # Dir containing "mason_genome", "split_sequence", etc.
+BINARY_DIR="<path to built binaries>" # Dir containing "generate_reads", "split_sequence", etc.
+MASON_BINARY_DIR="<path to mason binaries>" # Dir containing "mason_genome", "mason_variator", etc.
 OUT_DIR="<output path>" # Where simulated data should be stored
 LENGTH=4294967296 # 4*2^30 =  4GiB
 SEED=42 # was 20181406 before, but was hardcoded to 42 in seqan
 BIN_NUMBER=1024
-ERRORS=2
+ERRORS=4
 READ_LENGTHS="100 150 250"
 READ_COUNT=1048576
 HAPLOTYPE_COUNT=16
@@ -32,7 +33,7 @@ echo "Simulating $BIN_NUMBER bins with reference length of $LENGTH and bin_lengt
 
 # Simulate reference
 echo "Simulating genome"
-$BINARY_DIR/mason_genome -l $LENGTH -o $bin_dir/ref.fasta -s $SEED &>/dev/null
+$MASON_BINARY_DIR/mason_genome -l $LENGTH -o $bin_dir/ref.fasta -s $SEED &>/dev/null
 # Evenly distribute it over bins
 echo "Splitting genome into bins"
 $BINARY_DIR/split_sequence --input $bin_dir/ref.fasta --length $bin_length --parts $BIN_NUMBER
@@ -42,7 +43,7 @@ rm $bin_dir/ref.fasta
 echo "Generating haplotypes"
 for i in $bin_dir/*.fa
 do
-    $BINARY_DIR/mason_variator \
+    $MASON_BINARY_DIR/mason_variator \
         -ir $i \
         -n $HAPLOTYPE_COUNT \
         -of $bin_dir/$(basename $i .fa).fasta \
